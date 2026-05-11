@@ -99,7 +99,74 @@ Coordinates stored as **ratios (0–1)** of image dimensions so annotations surv
 | Annotations        | Structured data in DB + SVG overlay       | Not pixel-flattened; enables edit history and search later       |
 | Testing            | Integration smoke tests on critical paths | Coverage debt; justified by single-engineer velocity             |
 
-## 6. Future Considerations
+## 6. API Specifications
+
+### REST Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/photos` | Upload a photo (multipart) |
+| `GET` | `/photos` | List photos (paginated, newest first) |
+| `GET` | `/photos/:id` | Get photo metadata + URLs |
+| `DELETE` | `/photos/:id` | Delete photo + all children |
+| `POST` | `/photos/:id/annotations` | Create annotation |
+| `GET` | `/photos/:id/annotations` | List annotations for a photo |
+| `PUT` | `/annotations/:id` | Update annotation position/shape |
+| `DELETE` | `/annotations/:id` | Remove annotation |
+| `GET` | `/photos/:id/threads` | List threads for a photo |
+| `GET` | `/annotations/:id/thread` | Get thread for an annotation |
+| `POST` | `/threads/:id/messages` | Post a message |
+| `GET` | `/threads/:id/messages` | List messages (oldest first) |
+| `GET` | `/me` | Current user profile |
+
+### WebSocket Protocol
+
+```
+Connect:   WS /ws?photo_id=<id>&token=<jwt>
+```
+
+Server pushes:
+
+```json
+{"type": "new_annotation",   "data": { ...annotation }}
+{"type": "annotation_updated", "data": { ...annotation }}
+{"type": "annotation_deleted", "data": { "id": "..." }}
+{"type": "new_message",      "data": { ...message }}
+```
+
+Client sends:
+
+```json
+{"type": "ping"}
+```
+
+The WebSocket hub maintains a map of `photo_id → Set<Connection>`. When a new message or annotation is created via REST, the monolith pushes the event to all connected clients viewing that photo. No polling needed.
+
+## 7. Scenarios
+
+### Scenario 1: Scratch on a part (happy path)
+
+1. **Upload**: Factory worker opens the photo viewer in-browser, uploads a JPEG of the scratched part via `POST /photos`. Monolith stores the binary in object store, inserts metadata row in PostgreSQL, starts async thumbnail generation.
+2. **Annotate**: Worker clicks "Add annotation" on the photo, drags a circle around the scratch. The client sends `POST /photos/:id/annotations` with shape coordinates. Monolith inserts annotation and its associated thread (annotation_id set). The first message body is "Is this ok?".
+3. **Real-time push**: The monolith pushes `new_annotation` and `new_message` events over WebSocket to all connected clients viewing that photo. An engineer who has the photo open sees the circle appear in real-time.
+4. **Respond**: Engineer clicks the circle, sees the thread panel open with the question, types a reply. `POST /threads/:id/messages` stores the message and pushes `new_message` via WebSocket.
+5. **Notify**: The factory worker sees the response appear instantly.
+
+### Scenario 2: Photo-level discussion (no annotation)
+
+1. An engineer opens a photo of a standard bracket and wants to ask procurement about pricing.
+2. They click "Start discussion" (no circle needed). This creates a thread with `annotation_id = null` linked directly to the photo.
+3. Procurement team members see the new thread appear in real-time and respond.
+
+### Scenario 3: Concurrent annotations
+
+1. Two engineers open the same photo simultaneously.
+2. Engineer A circles the surface finish; Engineer B circles a hole dimension.
+3. Both `POST /photos/:id/annotations` calls are processed independently. Each creates its own annotation + thread.
+4. Both annotations are broadcast via WebSocket. Each engineer sees both circles appear regardless of who created them.
+5. Threads are independent — discussion about surface finish and hole dimension do not interfere.
+
+## 8. Future Considerations
 
 - **Multi-tenancy**: add `tenant_id` to all tables, switch to presigned URL uploads
 - **Horizontal scale**: extract WebSocket hub to Redis pub/sub, add more monolith instances behind a load balancer
