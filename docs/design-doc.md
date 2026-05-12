@@ -103,21 +103,21 @@ Coordinates stored as **ratios (0–1)** of image dimensions so annotations surv
 
 ### REST Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/photos` | Upload a photo (multipart) |
-| `GET` | `/photos` | List photos (paginated, newest first) |
-| `GET` | `/photos/:id` | Get photo metadata + URLs |
-| `DELETE` | `/photos/:id` | Delete photo + all children |
-| `POST` | `/photos/:id/annotations` | Create annotation |
-| `GET` | `/photos/:id/annotations` | List annotations for a photo |
-| `PUT` | `/annotations/:id` | Update annotation position/shape |
-| `DELETE` | `/annotations/:id` | Remove annotation |
-| `GET` | `/photos/:id/threads` | List threads for a photo |
-| `GET` | `/annotations/:id/thread` | Get thread for an annotation |
-| `POST` | `/threads/:id/messages` | Post a message |
-| `GET` | `/threads/:id/messages` | List messages (oldest first) |
-| `GET` | `/me` | Current user profile |
+| Method   | Path                      | Description                           |
+| -------- | ------------------------- | ------------------------------------- |
+| `POST`   | `/photos`                 | Upload a photo (multipart)            |
+| `GET`    | `/photos`                 | List photos (paginated, newest first) |
+| `GET`    | `/photos/:id`             | Get photo metadata + URLs             |
+| `DELETE` | `/photos/:id`             | Delete photo + all children           |
+| `POST`   | `/photos/:id/annotations` | Create annotation                     |
+| `GET`    | `/photos/:id/annotations` | List annotations for a photo          |
+| `PUT`    | `/annotations/:id`        | Update annotation position/shape      |
+| `DELETE` | `/annotations/:id`        | Remove annotation                     |
+| `GET`    | `/photos/:id/threads`     | List threads for a photo              |
+| `GET`    | `/annotations/:id/thread` | Get thread for an annotation          |
+| `POST`   | `/threads/:id/messages`   | Post a message                        |
+| `GET`    | `/threads/:id/messages`   | List messages (oldest first)          |
+| `GET`    | `/me`                     | Current user profile                  |
 
 ### WebSocket Protocol
 
@@ -137,7 +137,7 @@ Server pushes:
 Client sends:
 
 ```json
-{"type": "ping"}
+{ "type": "ping" }
 ```
 
 The WebSocket hub maintains a map of `photo_id → Set<Connection>`. When a new message or annotation is created via REST, the monolith pushes the event to all connected clients viewing that photo. No polling needed.
