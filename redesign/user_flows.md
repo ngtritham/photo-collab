@@ -11,6 +11,8 @@
 
 ## Scenario 1 — Upload Photo
 
+![Scenario 1 — Upload Photo](user_flow_img_gpt/s1.png)
+
 **Actor:** Factory worker or Engineer
 
 1. User selects a channel
@@ -25,6 +27,8 @@
 
 ## Scenario 2 — Load Photo
 
+![Scenario 2 — Upload Photo](user_flow_img_gpt/s2.png)
+
 **Actor:** Factory worker or Engineer
 
 1. User selects a channel
@@ -38,6 +42,8 @@
 ---
 
 ## Scenario 3 — Add New Annotation
+
+![Scenario 3 — Upload Photo](user_flow_img_gpt/s3.png)
 
 **Actor:** Factory worker or Engineer  
 **Precondition:** User has completed S1 or S2
@@ -54,6 +60,8 @@
 
 ## Scenario 4 — Receive & Open Notification
 
+![Scenario 4 — Upload Photo](user_flow_img_gpt/s4.png)
+
 **Actor:** Tagged user (Factory worker or Engineer)  
 **Precondition:** User was @mentioned in a thread (S3 or S5)
 
@@ -66,6 +74,8 @@
 ---
 
 ## Scenario 5 — Select Existing Annotation
+
+![Scenario 5 — Upload Photo](user_flow_img_gpt/s5.png)
 
 **Actor:** Factory worker or Engineer  
 **Precondition:** User has completed S2 and the photo has at least one annotation circle
