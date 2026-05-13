@@ -16,7 +16,7 @@
 **Actor:** Factory worker or Engineer
 
 1. User selects a channel
-2. App shows the **Photo Gallery** (→ see S8) — existing photos sorted by latest activity, each with a status dot
+2. App shows the **Photo Gallery** (→ see S7) — existing photos sorted by latest activity, each with a status dot
 3. User taps the **"Add"** button
 4. User captures a new photo or picks one from the device gallery
 5. Client compresses / resizes the photo before upload
@@ -32,12 +32,12 @@
 **Actor:** Factory worker or Engineer
 
 1. User selects a channel
-2. App shows the **Photo Gallery** (→ see S8) — existing photos sorted by latest activity, each with a status dot
+2. App shows the **Photo Gallery** (→ see S7) — existing photos sorted by latest activity, each with a status dot
 3. User taps an existing photo card
 4. Photo streams from server — a progress bar is shown
 5. On load complete, all existing annotation circles render on top of the photo
 
-> **Note:** S1 and S2 share the same entry point — the Photo Gallery (S8). The difference is whether the user taps "Add" (S1) or an existing photo (S2).
+> **Note:** S1 and S2 share the same entry point — the Photo Gallery (S7). The difference is whether the user taps "Add" (S1) or an existing photo (S2).
 
 ---
 
@@ -99,7 +99,7 @@
 1. User taps the **"Resolve"** button inside the thread bottom sheet
 2. The annotation circle changes to **green** on the photo
 3. The thread is marked as resolved (read-only / no further replies)
-4. If **all** annotation circles on the photo are now resolved, the photo card updates to show a **green dot** in the Photo Gallery (→ see S8)
+4. If **all** annotation circles on the photo are now resolved, the photo card updates to show a **green dot** in the Photo Gallery (→ see S7)
 
 ---
 
@@ -127,21 +127,19 @@
 
 ```
 Channel List
-    └── Photo Gallery (S8) ◄─────────────────── dot updates from S6
+    └── Photo Gallery (S7) ◄─────────────────── dot updates from S6
             ├── [tap "Add"] Upload Photo (S1)
-            │       └── Draw Mode (S7)
             │               └── Add New Annotation (S3)
-            │                       ├── Resolve Annotation (S6) ──→ updates S8 dot
+            │                       ├── Resolve Annotation (S6) ──→ updates S7 dot
             │                       └── @mention ──→ Notification (S4)
             │
             └── [tap photo] Load Photo (S2)
                     ├── Select Existing Annotation (S5)
-                    │       ├── Resolve Annotation (S6) ──→ updates S8 dot
+                    │       ├── Resolve Annotation (S6) ──→ updates S7 dot
                     │       └── @mention ──→ Notification (S4)
-                    └── Draw Mode (S7)
-                            └── Add New Annotation (S3)
-                                    ├── Resolve Annotation (S6) ──→ updates S8 dot
-                                    └── @mention ──→ Notification (S4)
+                    └── Add New Annotation (S3)
+                                ├── Resolve Annotation (S6) ──→ updates S7 dot
+                                └── @mention ──→ Notification (S4)
 
 Notification (S4) ──→ deep-link ──→ Photo + specific thread bottom sheet
 ```
