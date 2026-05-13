@@ -23,6 +23,9 @@
 6. Photo streams to server — a progress bar is shown
 7. On upload complete, the photo opens with the annotation toolbar visible
 
+
+<div style="page-break-after: always;"></div>
+
 ---
 
 ## Scenario 2 — Load Photo
@@ -38,6 +41,9 @@
 5. On load complete, all existing annotation circles render on top of the photo
 
 > **Note:** S1 and S2 share the same entry point — the Photo Gallery (S7). The difference is whether the user taps "Add" (S1) or an existing photo (S2).
+
+
+<div style="page-break-after: always;"></div>
 
 ---
 
@@ -56,6 +62,10 @@
 6. User taps **"Submit"**
 7. Any tagged user receives a **push notification** about the new thread (→ see S4)
 
+
+
+<div style="page-break-after: always;"></div>
+
 ---
 
 ## Scenario 4 — Receive & Open Notification
@@ -70,6 +80,10 @@
 3. App **deep-links** directly to the relevant photo
 4. The specific annotation circle's thread bottom sheet opens automatically
 5. User can read the thread and reply (→ see S5)
+
+
+
+<div style="page-break-after: always;"></div>
 
 ---
 
@@ -87,6 +101,10 @@
 5. User taps **"Submit"**
 6. Any tagged user receives a push notification (→ see S4)
 
+
+
+<div style="page-break-after: always;"></div>
+
 ---
 
 ## Scenario 6 — Resolve Annotation
@@ -100,6 +118,10 @@
 2. The annotation circle changes to **green** on the photo
 3. The thread is marked as resolved (read-only / no further replies)
 4. If **all** annotation circles on the photo are now resolved, the photo card updates to show a **green dot** in the Photo Gallery (→ see S7)
+
+
+
+<div style="page-break-after: always;"></div>
 
 ---
 
@@ -121,6 +143,8 @@
    - User taps **"Add"** button → continues into **S1 (Upload Photo)**
    - User taps an existing photo card → continues into **S2 (Load Photo)**
 
+<div style="page-break-after: always;"></div>
+
 ---
 
 ## Flow Relationships
@@ -129,17 +153,17 @@
 Channel List
     └── Photo Gallery (S7) ◄─────────────────── dot updates from S6
             ├── [tap "Add"] Upload Photo (S1)
-            │               └── Add New Annotation (S3)
-            │                       ├── Resolve Annotation (S6) ──→ updates S7 dot
-            │                       └── @mention ──→ Notification (S4)
+            │       └── Add New Annotation (S3)
+            │            ├── Resolve Annotation (S6) ──→ updates S7 dot
+            │            └── @mention ──→ Notification (S4)
             │
             └── [tap photo] Load Photo (S2)
                     ├── Select Existing Annotation (S5)
-                    │       ├── Resolve Annotation (S6) ──→ updates S7 dot
-                    │       └── @mention ──→ Notification (S4)
+                    │    ├── Resolve Annotation (S6) ──→ updates S7 dot
+                    │    └── @mention ──→ Notification (S4)
                     └── Add New Annotation (S3)
-                                ├── Resolve Annotation (S6) ──→ updates S7 dot
-                                └── @mention ──→ Notification (S4)
+                         ├── Resolve Annotation (S6) ──→ updates S7 dot
+                         └── @mention ──→ Notification (S4)
 
 Notification (S4) ──→ deep-link ──→ Photo + specific thread bottom sheet
 ```
