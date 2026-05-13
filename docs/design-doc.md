@@ -2,13 +2,13 @@
 
 ## 1. Overview
 
-PhotoCollab is a photo annotation and threaded messaging service for large manufacturing companies. Factory workers, mechanical engineers, and procurement teams communicate via annotated photos — a factory worker photographs a scratched part, circles the defect with a question, and an engineer responds in a thread.
+PhotoCollab is a photo annotation and threaded messaging service for large manufacturing companies. Factory workers, mechanical engineers, and procurement teams resolve part-quality questions via annotated photos — a factory worker photographs a scratched part, circles the defect, asks "Is this ok?", and an engineer replies in a thread.
 
-**Constraints**: single engineer, no code written, time pressure to show viability. Readers: engineering leads and managers.
+**Constraints**: single engineer, no code written, time pressure to prove viability. Readers: engineering leads and managers.
 
 ## 2. Architecture
 
-A **modular monolith** deployed as one service. The monolith contains three bounded contexts (Photo, Annotation, Thread) as internal packages with strict module boundaries. A single deployable keeps iteration fast; extracting modules into separate services later is realistic because the interfaces between contexts are already clean.
+A **modular monolith** deployed as one service with three bounded contexts (Photo, Annotation, Thread) as internal packages with strict module interfaces. Single deployable keeps iteration fast; contexts can be extracted to separate services later without rewriting interfaces.
 
 ```
 ┌─────────────┐     ┌─────────────┐
@@ -23,47 +23,45 @@ A **modular monolith** deployed as one service. The monolith contains three boun
 │  │ Photo  │ │Annotation│ │ Thread │ │
 │  │Module  │ │ Module   │ │ Module │ │
 │  └───┬────┘ └────┬─────┘ └───┬────┘ │
-│      │           │           │      │
-│  ┌───┴───────────┴───────────┴───┐  │
+│      └───────────┴───────────┘      │
+│  ┌───────────────────────────────┐  │
 │  │         Auth Middleware       │  │
 │  └───────────────────────────────┘  │
-│  ┌───────────────────────────────┐  │
-│  │      WebSocket Hub           │  │
-│  │  (photo_id → connections)    │  │
-│  └───────────────────────────────┘  │
-│  ┌───────────────────────────────┐  │
-│  │   Thumbnail Worker (sharp.js)│  │
-│  └───────────────────────────────┘  │
+│  ┌──────────────────┐ ┌──────────┐  │
+│  │  WebSocket Hub   │ │Thumbnail │  │
+│  │ photo_id→conns   │ │ Worker   │  │
+│  └──────────────────┘ └──────────┘  │
 └──────────┬──────────────────────────┘
            │
-     ┌─────┴─────────┬──────────────┐
-     ▼               ▼              ▼
-┌──────────┐  ┌──────────────┐  ┌──────┐
-│PostgreSQL│  │ Object Store │  │ JWT  │
-│(TypeORM) │  │   (photos)   │  │ IdP  │
-└──────────┘  └──────────────┘  └──────┘
+     ┌─────┴──────────┬──────────────┐
+     ▼                ▼              ▼
+┌──────────┐  ┌──────────────┐  ┌────────┐
+│PostgreSQL│  │ Object Store │  │JWT IdP │
+│(TypeORM) │  │ GCS / S3     │  │(Clerk) │
+└──────────┘  └──────────────┘  └────────┘
+  self-managed   fully managed    fully managed
 ```
 
-- **Client** (Vite + React SPA) communicates via REST for CRUD and WebSocket for real-time thread updates
-- **Monolith** handles all business logic, auth verification, and WebSocket connection management
-- **PostgreSQL** stores all relational data (photos metadata, annotations, threads, messages, users)
-- **Object Store** stores photo binaries and generated thumbnails
-- **JWT IdP** handles authentication; the monolith verifies tokens and extracts user claims (name, role)
+- **Client** — Vite + React SPA; REST for CRUD, WebSocket for real-time annotation and thread events
+- **Monolith** — TypeScript; handles business logic, auth verification, WebSocket fan-out, async thumbnail generation (sharp.js)
+- **PostgreSQL** — relational data (photos, annotations, threads, messages, users); self-managed on VM or managed PG (Cloud SQL / RDS)
+- **Object Store** — photo binaries and thumbnails; fully managed (GCS or S3)
+- **JWT IdP** — external identity provider (Clerk or Auth0); monolith verifies tokens, extracts name and role claims
 
 ## 3. Technical Stack
 
 | Layer            | Technology                              |
 | ---------------- | --------------------------------------- |
-| Frontend         | TypeScript, React, Vite, SVG (overlays) |
-| Backend          | TypeScript                              |
+| Frontend         | TypeScript, React, Vite, SVG overlays   |
+| Backend          | TypeScript (Node.js)                    |
 | API              | REST + WebSocket                        |
 | ORM              | TypeORM                                 |
 | Database         | PostgreSQL                              |
-| Object Storage   | Cloud object store (GCS/S3)             |
-| Image Processing | sharp.js                                |
-| Auth             | External IdP (JWT)                      |
+| Object Storage   | GCS / S3 (fully managed)                |
+| Image Processing | sharp.js (in-process worker)            |
+| Auth             | External IdP — JWT (Clerk / Auth0)      |
 
-## 4. Database ER Diagram
+## 4. Data Model
 
 ```
 user ────< photo          (uploaded_by)
@@ -73,103 +71,64 @@ user ────< message        (author_id)
 photo ────< annotation    (photo_id)
 photo ────< thread        (photo_id)
 
-annotation? ──── thread  (annotation_id nullable)
+annotation? ──── thread   (annotation_id nullable)
 thread ────< message      (thread_id)
 ```
 
-### Key tables
+**Key tables**
 
-**photo** — id, filename, mime_type, object_key, width, height, uploaded_by, created_at
-**annotation** — id, photo_id, author_id, shape_type, x, y, width, height, radius, color, created_at
-**thread** — id, photo_id, annotation_id (nullable), created_at
-**message** — id, thread_id, author_id, body, created_at
-**user** — id, name, email, role (engineer/procurement/factory)
+- **photo** — `id, filename, mime_type, object_key, width, height, uploaded_by, created_at`
+- **annotation** — `id, photo_id, author_id, shape_type, x, y, width, height, radius, color, created_at`
+- **thread** — `id, photo_id, annotation_id (nullable), created_at`
+- **message** — `id, thread_id, author_id, body, created_at`
+- **user** — `id, name, email, role (engineer | procurement | factory)`
 
-Coordinates stored as **ratios (0–1)** of image dimensions so annotations survive responsive layouts. Each annotation gets its own thread; the first message body contains the annotation text, avoiding data duplication.
+Annotation coordinates stored as **ratios (0–1)** of image dimensions — annotations survive responsive layout without recalculation. Each annotation owns one thread; the first message carries the annotation text, avoiding duplication.
 
-## 5. Key Design Decisions & Trade-offs
+## 5. Design Decisions & Trade-offs
 
-| Decision           | Choice                                    | Trade-off                                                        |
-| ------------------ | ----------------------------------------- | ---------------------------------------------------------------- |
-| Architecture style | Modular monolith                          | Simple deploy today; extraction cost when team grows             |
-| Photo upload       | Through monolith (not presigned URL)      | Simpler auth, but monolith becomes bandwidth bottleneck at scale |
-| Thumbnails         | In-process async (sharp.js)               | No dedicated worker infra; competes for CPU with API             |
-| Multi-tenancy      | None (single tenant, single DB)           | Fastest path to value; migration needed if adding tenants        |
-| Real-time          | WebSocket embedded in monolith            | No fan-out infra; horizontal scaling needs Redis pub/sub later   |
-| Annotations        | Structured data in DB + SVG overlay       | Not pixel-flattened; enables edit history and search later       |
-| Testing            | Integration smoke tests on critical paths | Coverage debt; justified by single-engineer velocity             |
+| Decision           | Choice                               | Trade-off                                                        |
+| ------------------ | ------------------------------------ | ---------------------------------------------------------------- |
+| Architecture style | Modular monolith                     | Simple deploy today; extraction cost when team grows             |
+| Photo upload       | Through monolith (not presigned URL) | Simpler auth; monolith is bandwidth bottleneck at scale          |
+| Thumbnails         | In-process async (sharp.js)          | No dedicated worker infra; competes for CPU with API             |
+| Multi-tenancy      | None — single tenant, single DB      | Fastest path to value; migration needed when adding tenants      |
+| Real-time          | WebSocket embedded in monolith       | No fan-out infra; horizontal scaling needs Redis pub/sub later   |
+| Annotations        | Structured DB rows + SVG overlay     | Not pixel-flattened; enables edit history and search later       |
+| Testing            | Integration smoke tests on critical paths | Coverage debt; justified by single-engineer velocity        |
 
-## 6. API Specifications
+## 6. Non-Functional Requirements
 
-### REST Endpoints
+**Security**
+- All traffic over TLS. JWT verified on every request via Auth Middleware; token passed as `Authorization: Bearer` (REST) and query param at WS handshake.
+- Role claims (`engineer | procurement | factory`) enforced at module boundary — factory role cannot delete photos or annotations.
+- Object store buckets private; photos served via short-lived signed URLs (15 min TTL) generated by monolith. No public bucket.
+- Secrets (DB credentials, IdP client secret) via environment variables / secret manager — never in source.
 
-| Method   | Path                      | Description                           |
-| -------- | ------------------------- | ------------------------------------- |
-| `POST`   | `/photos`                 | Upload a photo (multipart)            |
-| `GET`    | `/photos`                 | List photos (paginated, newest first) |
-| `GET`    | `/photos/:id`             | Get photo metadata + URLs             |
-| `DELETE` | `/photos/:id`             | Delete photo + all children           |
-| `POST`   | `/photos/:id/annotations` | Create annotation                     |
-| `GET`    | `/photos/:id/annotations` | List annotations for a photo          |
-| `PUT`    | `/annotations/:id`        | Update annotation position/shape      |
-| `DELETE` | `/annotations/:id`        | Remove annotation                     |
-| `GET`    | `/photos/:id/threads`     | List threads for a photo              |
-| `GET`    | `/annotations/:id/thread` | Get thread for an annotation          |
-| `POST`   | `/threads/:id/messages`   | Post a message                        |
-| `GET`    | `/threads/:id/messages`   | List messages (oldest first)          |
-| `GET`    | `/me`                     | Current user profile                  |
+**Performance**
+- Target: p99 REST < 500 ms, WebSocket push < 100 ms after DB write.
+- Photo upload cap: 20 MB. Thumbnail generation async — does not block upload response.
+- Designed for ~50 concurrent users at launch. WebSocket hub in-memory; Redis pub/sub added before horizontal scale-out.
 
-### WebSocket Protocol
+**DevOps**
+- Monolith containerised (Docker). Single-region deploy: one VM or managed container service (Cloud Run / Fly.io) + managed PostgreSQL + object store bucket.
+- CI via GitHub Actions: lint → type-check → test on every PR. Docker image built and pushed to registry on merge to main.
+- One environment at launch (production). Staging added when second engineer joins.
 
-```
-Connect:   WS /ws?photo_id=<id>&token=<jwt>
-```
+**Testing**
+- Unit tests on pure business logic (coordinate ratio conversion, role checks).
+- Integration tests on three critical paths: photo upload → annotation → thread creation, WebSocket broadcast, and auth rejection on missing/invalid JWT.
+- Manual smoke test on every deploy until CI coverage warrants automation.
 
-Server pushes:
+**Monitoring & Observability**
+- Structured JSON logs (request ID, user ID, duration, status) on every HTTP and WS event.
+- Error rate and p99 latency dashboards (Cloud Monitoring or Datadog). Alert on sustained 5xx rate > 1% or p99 > 2 s.
+- WebSocket active-connection count as leading indicator of adoption.
+- Object store and DB storage metrics tracked to anticipate capacity needs.
 
-```json
-{"type": "new_annotation",   "data": { ...annotation }}
-{"type": "annotation_updated", "data": { ...annotation }}
-{"type": "annotation_deleted", "data": { "id": "..." }}
-{"type": "new_message",      "data": { ...message }}
-```
+## 7. Future Considerations
 
-Client sends:
-
-```json
-{ "type": "ping" }
-```
-
-The WebSocket hub maintains a map of `photo_id → Set<Connection>`. When a new message or annotation is created via REST, the monolith pushes the event to all connected clients viewing that photo. No polling needed.
-
-## 7. Scenarios
-
-### Scenario 1: Scratch on a part (happy path)
-
-1. **Upload**: Factory worker opens the photo viewer in-browser, uploads a JPEG of the scratched part via `POST /photos`. Monolith stores the binary in object store, inserts metadata row in PostgreSQL, starts async thumbnail generation.
-2. **Annotate**: Worker clicks "Add annotation" on the photo, drags a circle around the scratch. The client sends `POST /photos/:id/annotations` with shape coordinates. Monolith inserts annotation and its associated thread (annotation_id set). The first message body is "Is this ok?".
-3. **Real-time push**: The monolith pushes `new_annotation` and `new_message` events over WebSocket to all connected clients viewing that photo. An engineer who has the photo open sees the circle appear in real-time.
-4. **Respond**: Engineer clicks the circle, sees the thread panel open with the question, types a reply. `POST /threads/:id/messages` stores the message and pushes `new_message` via WebSocket.
-5. **Notify**: The factory worker sees the response appear instantly.
-
-### Scenario 2: Photo-level discussion (no annotation)
-
-1. An engineer opens a photo of a standard bracket and wants to ask procurement about pricing.
-2. They click "Start discussion" (no circle needed). This creates a thread with `annotation_id = null` linked directly to the photo.
-3. Procurement team members see the new thread appear in real-time and respond.
-
-### Scenario 3: Concurrent annotations
-
-1. Two engineers open the same photo simultaneously.
-2. Engineer A circles the surface finish; Engineer B circles a hole dimension.
-3. Both `POST /photos/:id/annotations` calls are processed independently. Each creates its own annotation + thread.
-4. Both annotations are broadcast via WebSocket. Each engineer sees both circles appear regardless of who created them.
-5. Threads are independent — discussion about surface finish and hole dimension do not interfere.
-
-## 8. Future Considerations
-
-- **Multi-tenancy**: add `tenant_id` to all tables, switch to presigned URL uploads
-- **Horizontal scale**: extract WebSocket hub to Redis pub/sub, add more monolith instances behind a load balancer
-- **Version history**: snapshot + delta approach for annotation edit history
-- **ML features**: smart scratch detection, similar-part suggestions — introduce Python microservice
-- **Staging environment**: add when second engineer joins
+- **Multi-tenancy** — add `tenant_id` to all tables; switch uploads to presigned URLs
+- **Horizontal scale** — extract WebSocket hub to Redis pub/sub; add load balancer
+- **Offline support** — service worker queues photos + annotations locally, syncs on reconnect (factory floor wifi unreliable)
+- **ML defect detection** — vision model proposes annotation circle; Python microservice alongside monolith
