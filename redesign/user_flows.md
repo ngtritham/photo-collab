@@ -11,7 +11,7 @@
 
 ## Scenario 1 — Upload Photo
 
-![Scenario 1 — Upload Photo](user_flow_img_gpt/s1.png)
+![Scenario 1 — Upload Photo](user_flow_img_gemini/s1.png)
 
 **Actor:** Factory worker or Engineer
 
@@ -27,7 +27,7 @@
 
 ## Scenario 2 — Load Photo
 
-![Scenario 2 — Upload Photo](user_flow_img_gpt/s2.png)
+![Scenario 2 — Upload Photo](user_flow_img_gemini/s2.png)
 
 **Actor:** Factory worker or Engineer
 
@@ -43,7 +43,7 @@
 
 ## Scenario 3 — Add New Annotation
 
-![Scenario 3 — Upload Photo](user_flow_img_gpt/s3.png)
+![Scenario 3 — Upload Photo](user_flow_img_gemini/s3.png)
 
 **Actor:** Factory worker or Engineer  
 **Precondition:** User has completed S1 or S2
@@ -60,7 +60,7 @@
 
 ## Scenario 4 — Receive & Open Notification
 
-![Scenario 4 — Upload Photo](user_flow_img_gpt/s4.png)
+![Scenario 4 — Upload Photo](user_flow_img_gemini/s4.png)
 
 **Actor:** Tagged user (Factory worker or Engineer)  
 **Precondition:** User was @mentioned in a thread (S3 or S5)
@@ -75,7 +75,7 @@
 
 ## Scenario 5 — Select Existing Annotation
 
-![Scenario 5 — Upload Photo](user_flow_img_gpt/s5.png)
+![Scenario 5 — Upload Photo](user_flow_img_gemini/s5.png)
 
 **Actor:** Factory worker or Engineer  
 **Precondition:** User has completed S2 and the photo has at least one annotation circle
@@ -91,6 +91,8 @@
 
 ## Scenario 6 — Resolve Annotation
 
+![Scenario 6 — Upload Photo](user_flow_img_gemini/s6.png)
+
 **Actor:** Factory worker or Engineer  
 **Precondition:** User is viewing a thread via S3 or S5
 
@@ -102,6 +104,8 @@
 ---
 
 ## Scenario 7 — Photo Gallery
+
+![Scenario 7 — Upload Photo](user_flow_img_gemini/s7.png)
 
 **Actor:** Factory worker or Engineer  
 **Precondition:** User has selected a channel
